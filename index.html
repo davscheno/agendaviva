@@ -47,37 +47,20 @@
       background: var(--bianco); border-bottom: 1px solid var(--bordo);
       padding: 18px 0;
     }
-    /* Lockup brand: ATS Liguria + Agenda viva (header del mockup) */
+    /* Header del mockup: ATS a sinistra, logo Agenda viva in alto a destra */
     .toplogos {
       display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
       margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--bordo);
     }
     .logo { display: block; }
-    .logo--ats { width: 195px; height: 47px; }   /* aspect 380:92 — prominente */
-    .brand-divider { width: 1px; align-self: stretch; min-height: 54px; background: var(--bordo); }
-    .brand-titles { display: flex; flex-direction: column; gap: 4px; }
-    .brand-name-lg {
-      display: inline-flex; align-items: center; gap: 12px;
-      font-size: clamp(1.45rem, 3.4vw, 2rem);
-      font-weight: 600; color: var(--blu); letter-spacing: -.01em; line-height: 1.05;
-    }
-    .brand-claim-lg {
-      font-size: clamp(.95rem, 1.7vw, 1.05rem);
-      font-style: italic; color: var(--teal); letter-spacing: .01em;
-    }
-    .pulse {
-      width: 12px; height: 12px; border-radius: 50%; background: var(--teal); flex: none;
-      box-shadow: 0 0 0 0 rgba(15, 110, 86, .45);
-      animation: agendaPulse 2.2s ease-out infinite;
-    }
-    @keyframes agendaPulse {
-      0%   { box-shadow: 0 0 0 0 rgba(15, 110, 86, .45); }
-      70%  { box-shadow: 0 0 0 12px rgba(15, 110, 86, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(15, 110, 86, 0); }
-    }
+    .logo--ats { width: 195px; height: 47px; }   /* aspect 380:92 */
+    .logo--agendaviva { width: 152px; height: 81px; }   /* aspect 600:320 */
+    .brand-mark { margin-left: auto; display: block; border-radius: 8px; padding: 2px; }
+    .brand-mark:hover { background: #F4F6F8; }
+    .brand-mark:focus-visible { outline: 3px solid var(--ambra); outline-offset: 3px; }
     @media (max-width: 560px) {
-      .brand-divider { display: none; }
       .logo--ats { width: 168px; height: 41px; }
+      .logo--agendaviva { width: 124px; height: 66px; }
     }
 
     /* Etichetta IA inline (criterio di matching) */
@@ -345,6 +328,49 @@
         </text>
         <text x="3" y="82" font-family="-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-weight="700" font-size="15" letter-spacing="0.4" fill="#1F4E9D">AZIENDA TUTELA DELLA SALUTE LIGURIA</text>
       </symbol>
+
+      <!-- Gradient per la freccia del logo Agenda viva -->
+      <linearGradient id="agArrowGrad" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#5BAFA5"/>
+        <stop offset="1" stop-color="#6FBE5A"/>
+      </linearGradient>
+
+      <!-- Logo "Agenda viva — Ogni posto conta" -->
+      <symbol id="logo-agendaviva" viewBox="0 0 600 320">
+        <path d="M 60 200 A 115 115 0 1 1 285 130"
+              fill="none" stroke="url(#agArrowGrad)" stroke-width="13" stroke-linecap="round"/>
+        <polygon points="296,142 268,118 280,100" fill="#6FBE5A"/>
+        <rect x="90" y="105" width="135" height="138" rx="9" fill="#1B3553"/>
+        <rect x="113" y="92" width="7" height="22" rx="3" fill="#1B3553"/>
+        <rect x="195" y="92" width="7" height="22" rx="3" fill="#1B3553"/>
+        <g fill="#B9C5D2">
+          <rect x="101" y="130" width="25" height="22" rx="3"/>
+          <rect x="130" y="130" width="25" height="22" rx="3"/>
+          <rect x="159" y="130" width="25" height="22" rx="3"/>
+          <rect x="188" y="130" width="25" height="22" rx="3"/>
+          <rect x="101" y="156" width="25" height="22" rx="3"/>
+          <rect x="130" y="156" width="25" height="22" rx="3"/>
+          <rect x="159" y="156" width="25" height="22" rx="3" fill="#3DA84A"/>
+          <rect x="188" y="156" width="25" height="22" rx="3"/>
+          <rect x="101" y="182" width="25" height="22" rx="3"/>
+          <rect x="130" y="182" width="25" height="22" rx="3"/>
+          <rect x="159" y="182" width="25" height="22" rx="3"/>
+          <rect x="188" y="182" width="25" height="22" rx="3"/>
+        </g>
+        <circle cx="220" cy="230" r="30" fill="#1B3553"/>
+        <circle cx="220" cy="230" r="23" fill="#fff"/>
+        <line x1="220" y1="230" x2="220" y2="215" stroke="#1B3553" stroke-width="3" stroke-linecap="round"/>
+        <line x1="220" y1="230" x2="234" y2="230" stroke="#1B3553" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="220" cy="230" r="2.5" fill="#1B3553"/>
+        <text x="305" y="148" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif"
+              font-weight="700" font-size="80" fill="#1B3553" letter-spacing="-1">Agenda</text>
+        <text x="305" y="234" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif"
+              font-weight="700" font-size="80" fill="#3DA89F" letter-spacing="-1">Viva</text>
+        <path d="M 305 255 L 365 255 L 372 244 L 380 270 L 388 232 L 397 270 L 405 255 L 510 255"
+              fill="none" stroke="#3DA89F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="305" y="298" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif"
+              font-weight="600" font-size="28" fill="#4A5E70">Ogni posto conta</text>
+      </symbol>
     </defs>
   </svg>
 
@@ -353,17 +379,12 @@
        ============================================================ -->
   <header class="top">
     <div class="wrap">
-      <!-- Lockup ATS Liguria + identità di progetto Agenda viva -->
+      <!-- ATS Liguria a sinistra, logo Agenda viva in alto a destra -->
       <div class="toplogos">
         <svg class="logo logo--ats" role="img" aria-label="ATS Liguria — Azienda tutela della salute Liguria"><use href="#logo-ats"/></svg>
-        <span class="brand-divider" aria-hidden="true"></span>
-        <div class="brand-titles">
-          <span class="brand-name-lg">
-            <span class="pulse" aria-hidden="true"></span>
-            Agenda viva
-          </span>
-          <span class="brand-claim-lg">ogni posto conta — l’agenda che recupera ogni opportunità</span>
-        </div>
+        <a class="brand-mark" href="agenda_viva.html" aria-label="Agenda viva — apri la pagina di chiusura con il logo a tutto schermo">
+          <svg class="logo logo--agendaviva" role="img" aria-label="Agenda viva — Ogni posto conta"><use href="#logo-agendaviva"/></svg>
+        </a>
       </div>
       <span class="eyebrow">Mockup interattivo · valori illustrativi da modello</span>
       <h1>Come funziona, passo per passo</h1>
