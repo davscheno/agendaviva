@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agenda viva — Ogni posto conta | Liste di attesa più corte</title>
+  <meta name="description" content="Agenda viva: un sistema che recupera gli appuntamenti sanitari che si liberano e li riassegna automaticamente a chi attende oltre i tempi previsti. Ogni posto conta — senza nuovi macchinari." />
+
+  <style>
+    /* ============================================================
+       Palette e variabili di design
+       ============================================================ */
+    :root {
+      --blu:        #185FA5;  /* blu istituzionale */
+      --teal:       #0F6E56;  /* teal */
+      --ambra:      #B07206;  /* ambra */
+      --rosso:      #A32D2D;  /* rosso, solo allerta */
+      --testo:      #16202B;  /* testo principale */
+      --testo-sec:  #5B6B7A;  /* testo secondario */
+      --sfondo:     #F4F6F8;  /* sfondo pagina (grigio chiarissimo) */
+      --bianco:     #FFFFFF;  /* superfici */
+      --bordo:      #DAE0E6;  /* bordo sottile card */
+      --raggio:     10px;
+      --ombra:      0 1px 3px rgba(22,32,43,.08), 0 1px 2px rgba(22,32,43,.04);
+      --max:        1080px;
+      --nav-h:      64px;
+    }
+
+    /* ============================================================
+       Reset essenziale e base tipografica
+       ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: calc(var(--nav-h) + 12px); }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 17px;              /* testo base ≥ 16px */
+      font-weight: 400;
+      line-height: 1.6;
+      color: var(--testo);
+      background: var(--sfondo);
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, h4 { font-weight: 600; line-height: 1.25; color: var(--testo); }
+    h1 { font-size: clamp(1.9rem, 4.5vw, 2.8rem); margin: 0 0 .5em; }
+    h2 { font-size: clamp(1.5rem, 3.2vw, 2rem); margin: 0 0 .6em; }
+    h3 { font-size: 1.2rem; margin: 0 0 .4em; }
+    p  { margin: 0 0 1em; }
+    a  { color: var(--blu); }
+
+    /* Focus visibile per la navigazione da tastiera */
+    a:focus-visible, button:focus-visible, summary:focus-visible {
+      outline: 3px solid var(--ambra);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    /* Rispetto delle preferenze di movimento ridotto */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      * { animation: none !important; transition: none !important; }
+    }
+
+    /* ============================================================
+       Utility di layout
+       ============================================================ */
+    .wrap { max-width: var(--max); margin: 0 auto; padding: 0 20px; }
+    .section { padding: 64px 0; }
+    .section--alt { background: var(--bianco); }   /* fasce alternate bianco/grigio */
+    .eyebrow {
+      display: inline-block;
+      font-size: .8rem; font-weight: 600; letter-spacing: .04em;
+      color: var(--teal); margin-bottom: 8px;
+    }
+    .lead { font-size: 1.15rem; color: var(--testo-sec); max-width: 60ch; }
+
+    /* Tag pubblico (cittadini / addetti ai lavori) */
+    .badge {
+      display: inline-block; font-size: .72rem; font-weight: 600;
+      padding: 3px 10px; border-radius: 999px; margin-bottom: 14px;
+    }
+    .badge--cittadini { background: #E5F0F9; color: var(--blu); }
+    .badge--addetti   { background: #EAF1EE; color: var(--teal); }
+
+    /* Link "salta al contenuto" per screen reader / tastiera */
+    .skip {
+      position: absolute; left: -999px; top: 0; z-index: 100;
+      background: var(--blu); color: #fff; padding: 10px 16px; border-radius: 0 0 6px 0;
+    }
+    .skip:focus { left: 0; }
+
+    /* ============================================================
+       Navbar sticky
+       ============================================================ */
+    .nav {
+      position: sticky; top: 0; z-index: 50;
+      height: var(--nav-h);
+      background: rgba(255,255,255,.96);
+      border-bottom: 1px solid var(--bordo);
+      backdrop-filter: saturate(180%) blur(6px);
+    }
+    .nav__inner { display: flex; align-items: center; gap: 16px; height: 100%; }
+    .nav__brand { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--testo); text-decoration: none; white-space: nowrap; }
+    .nav__brand .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--blu); flex: none; }
+    .nav__links { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
+    .nav__links a {
+      color: var(--testo-sec); text-decoration: none; font-size: .92rem;
+      padding: 8px 10px; border-radius: 6px;
+    }
+    .nav__links a:hover { color: var(--blu); background: #EEF3F8; }
+    /* Toggle menu mobile */
+    .nav__toggle {
+      margin-left: auto; display: none;
+      background: none; border: 1px solid var(--bordo); border-radius: 6px;
+      padding: 8px 12px; font-size: .95rem; color: var(--testo); cursor: pointer;
+    }
+    @media (max-width: 860px) {
+      .nav__links {
+        position: absolute; top: var(--nav-h); left: 0; right: 0;
+        flex-direction: column; gap: 0; background: var(--bianco);
+        border-bottom: 1px solid var(--bordo); padding: 8px;
+        box-shadow: var(--ombra);
+      }
+      .nav__links[hidden] { display: none; }
+      .nav__links a { padding: 12px; border-radius: 6px; }
+      .nav__toggle { display: inline-block; }
+    }
+
+    /* ============================================================
+       Hero
+       ============================================================ */
+    .hero { background: var(--bianco); border-bottom: 1px solid var(--bordo); padding: 72px 0 64px; }
+    .hero__cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+    .btn {
+      display: inline-block; text-decoration: none; font-weight: 600; font-size: 1rem;
+      padding: 12px 22px; border-radius: 8px; border: 1px solid transparent; cursor: pointer;
+    }
+    .btn--primary { background: var(--blu); color: #fff; }
+    .btn--primary:hover { background: #134d85; }
+    .btn--ghost { background: #fff; color: var(--blu); border-color: var(--blu); }
+    .btn--ghost:hover { background: #EEF3F8; }
+
+    /* ============================================================
+       Card e griglie riutilizzabili
+       ============================================================ */
+    .card {
+      background: var(--bianco); border: 1px solid var(--bordo);
+      border-radius: var(--raggio); padding: 22px; box-shadow: var(--ombra);
+    }
+    .grid { display: grid; gap: 18px; }
+    .grid--2 { grid-template-columns: repeat(2, 1fr); }
+    .grid--3 { grid-template-columns: repeat(3, 1fr); }
+    .grid--4 { grid-template-columns: repeat(4, 1fr); }
+    @media (max-width: 820px) { .grid--3, .grid--4 { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) { .grid--2, .grid--3, .grid--4 { grid-template-columns: 1fr; } }
+
+    /* ============================================================
+       Diagramma di flusso (stadi numerati, accento a sinistra)
+       ============================================================ */
+    .flow { display: grid; gap: 0; }
+    .stage {
+      position: relative;
+      background: var(--bianco); border: 1px solid var(--bordo);
+      border-left: 5px solid var(--blu); border-radius: var(--raggio);
+      padding: 20px 22px 20px 64px; box-shadow: var(--ombra);
+    }
+    /* Pallino numerato dello stadio */
+    .stage__num {
+      position: absolute; left: 16px; top: 20px;
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--blu); color: #fff; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; font-size: .95rem;
+    }
+    /* Connettore verticale tra gli stadi */
+    .flow .connector {
+      width: 2px; height: 26px; background: var(--bordo);
+      margin: 6px 0 6px 33px;
+    }
+    .flow .connector::after {
+      content: "▼"; display: block; color: var(--testo-sec);
+      font-size: .7rem; transform: translate(-6px, 14px);
+    }
+    /* Varianti di colore per stadio (accento a sinistra) */
+    .stage--teal  { border-left-color: var(--teal); }
+    .stage--teal  .stage__num { background: var(--teal); }
+    .stage--ambra { border-left-color: var(--ambra); }
+    .stage--ambra .stage__num { background: var(--ambra); }
+
+    .subpool {
+      margin-top: 12px; display: grid; gap: 10px; grid-template-columns: 1fr 1fr;
+    }
+    @media (max-width: 560px) { .subpool { grid-template-columns: 1fr; } }
+    .subpool .mini {
+      border: 1px dashed var(--bordo); border-radius: 8px; padding: 12px 14px;
+      background: #FAFBFC;
+    }
+    .mini h4 { margin: 0 0 4px; font-size: .98rem; }
+    .mini p  { margin: 0; font-size: .92rem; color: var(--testo-sec); }
+
+    /* Esiti sì/no nel controllo dei tempi */
+    .outcome { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+    .pill {
+      font-size: .9rem; padding: 8px 12px; border-radius: 8px; font-weight: 600;
+      border: 1px solid var(--bordo);
+    }
+    .pill--ok  { background: #EAF1EE; color: var(--teal); }
+    .pill--no  { background: #FBEEEE; color: var(--rosso); }
+
+    /* Fascia trasversale governance */
+    .ribbon {
+      margin-top: 26px; background: #EEF3F8; border: 1px solid var(--bordo);
+      border-radius: var(--raggio); padding: 22px;
+    }
+    .ribbon h3 { color: var(--blu); }
+    .ribbon ul { margin: 0; padding-left: 18px; columns: 2; column-gap: 28px; }
+    .ribbon li { margin-bottom: 6px; }
+    @media (max-width: 560px) { .ribbon ul { columns: 1; } }
+
+    /* ============================================================
+       Percorso paziente (4 passi)
+       ============================================================ */
+    .steps { counter-reset: step; }
+    .step__n {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--teal); color: #fff; font-weight: 600; font-size: .9rem; margin-bottom: 10px;
+    }
+
+    /* ============================================================
+       Classi di priorità
+       ============================================================ */
+    .prio { border-top: 4px solid var(--blu); }
+    .prio--b { border-top-color: var(--rosso); }
+    .prio--d { border-top-color: var(--ambra); }
+    .prio--p { border-top-color: var(--teal); }
+    .prio .tag {
+      font-weight: 600; font-size: 1.4rem; display: inline-block; margin-bottom: 4px;
+    }
+    .note {
+      font-size: .95rem; color: var(--testo-sec); border-left: 3px solid var(--ambra);
+      padding: 4px 0 4px 14px; margin-top: 18px;
+    }
+
+    /* ============================================================
+       Stat card (numeri)
+       ============================================================ */
+    .stat { text-align: left; }
+    .stat .big { font-size: 2rem; font-weight: 600; color: var(--blu); display: block; line-height: 1.1; }
+    .stat .lbl { color: var(--testo-sec); font-size: .98rem; }
+    .illustrative {
+      display: inline-block; font-size: .72rem; font-weight: 600; letter-spacing: .02em;
+      color: var(--ambra); background: #FBF3E2; border: 1px solid #EAD9B4;
+      padding: 2px 8px; border-radius: 999px; margin-bottom: 14px;
+    }
+
+    /* ============================================================
+       Accordion FAQ
+       ============================================================ */
+    .faq details {
+      background: var(--bianco); border: 1px solid var(--bordo); border-radius: var(--raggio);
+      margin-bottom: 12px; box-shadow: var(--ombra); overflow: hidden;
+    }
+    .faq summary {
+      cursor: pointer; list-style: none; padding: 18px 20px; font-weight: 600;
+      display: flex; justify-content: space-between; align-items: center; gap: 14px;
+    }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary .chev { transition: transform .2s ease; color: var(--blu); flex: none; }
+    .faq details[open] summary .chev { transform: rotate(180deg); }
+    .faq .answer { padding: 0 20px 18px; color: var(--testo); }
+    .faq .answer p { margin: 0; }
+
+    /* ============================================================
+       Footer
+       ============================================================ */
+    .footer { background: var(--testo); color: #C7D1DA; padding: 48px 0 36px; }
+    .footer h3 { color: #fff; font-size: 1.05rem; }
+    .footer a { color: #9FC6EC; }
+    .footer .disclaimer {
+      border-left: 3px solid var(--ambra); padding-left: 14px; color: #E2E8EE; max-width: 70ch;
+    }
+    .footer hr { border: none; border-top: 1px solid #2A3845; margin: 24px 0; }
+    .footer small { color: #94A2B0; }
+
+    /* ============================================================
+       Pulsante "torna su"
+       ============================================================ */
+    .top {
+      position: fixed; right: 20px; bottom: 20px; z-index: 60;
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--blu); color: #fff; border: none; cursor: pointer;
+      box-shadow: var(--ombra); font-size: 1.2rem;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity .2s ease;
+    }
+    .top.show { opacity: 1; pointer-events: auto; }
+    .top:hover { background: #134d85; }
+
+    .divider { height: 2px; background: linear-gradient(90deg, var(--blu), var(--teal)); border: none; margin: 0; opacity: .15; }
+    ul.clean { padding-left: 18px; }
+    ul.clean li { margin-bottom: 6px; }
+
+    /* ============================================================
+       Loghi istituzionali (SVG inline) — barra superiore e footer
+       ============================================================ */
+    .instbar { background: var(--bianco); border-bottom: 1px solid var(--bordo); padding: 14px 0; }
+    .instbar__inner { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+    /* Logo Agenda viva: sempre in alto a destra (link alla pagina di chiusura) */
+    .brand-mark { margin-left: auto; display: block; border-radius: 8px; }
+    .brand-mark:hover { background: #F4F6F8; }
+    .brand-mark:focus-visible { outline: 3px solid var(--ambra); outline-offset: 3px; }
+
+    .logo { display: block; }
+    .logo--ats { width: 200px; height: 48px; }   /* aspect 380:92 — lockup prominente */
+    .logo--agendaviva { width: 158px; height: 84px; }   /* aspect 600:320 */
+    @media (max-width: 560px) {
+      .logo--ats { width: 168px; height: 41px; }
+      .logo--agendaviva { width: 124px; height: 66px; }
+    }
+
+    /* ============================================================
+       Lockup brand: ATS Liguria + "Agenda viva — ogni posto conta"
+       ============================================================ */
+    .brand-lockup { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+    .brand-divider { width: 1px; align-self: stretch; min-height: 58px; background: var(--bordo); }
+    .brand-titles { display: flex; flex-direction: column; gap: 4px; }
+    .brand-name-lg {
+      display: inline-flex; align-items: center; gap: 12px;
+      font-size: clamp(1.5rem, 3.4vw, 2.05rem);
+      font-weight: 600; color: var(--blu); letter-spacing: -.01em; line-height: 1.05;
+    }
+    .brand-claim-lg {
+      font-size: clamp(.95rem, 1.7vw, 1.1rem);
+      font-style: italic; color: var(--teal); letter-spacing: .01em;
+    }
+    /* Pulsazione "live" — sottolinea il concetto di "agenda viva" */
+    .pulse {
+      width: 12px; height: 12px; border-radius: 50%; background: var(--teal); flex: none;
+      box-shadow: 0 0 0 0 rgba(15, 110, 86, .45);
+      animation: agendaPulse 2.2s ease-out infinite;
+    }
+    @keyframes agendaPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(15, 110, 86, .45); }
+      70%  { box-shadow: 0 0 0 12px rgba(15, 110, 86, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(15, 110, 86, 0); }
+    }
+    @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+    @media (max-width: 560px) {
+      .brand-divider { display: none; }
+      .brand-lockup .logo--ats { width: 172px; height: 42px; }
+    }
+
+    /* Brand "Agenda viva" — lockup nella navbar e nell'hero */
+    .brand-text { display: inline-flex; flex-direction: column; line-height: 1.1; }
+    .brand-name  { font-weight: 600; font-size: .98rem; color: var(--testo); }
+    .brand-claim { font-size: .72rem; color: var(--testo-sec); font-weight: 400; letter-spacing: .02em; }
+    .brand-line {
+      display: flex; align-items: baseline; gap: 8px; margin: 0 0 10px;
+      font-size: 1rem;
+    }
+    .brand-line .bn  { color: var(--blu); font-weight: 600; font-size: 1.1rem; letter-spacing: .01em; }
+    .brand-line .bx  { color: var(--testo-sec); }
+    .brand-line .bc  { color: var(--testo-sec); font-weight: 400; font-style: italic; }
+
+    /* Chip bianco per i loghi nel footer scuro */
+    .footer-logos { margin-bottom: 24px; }
+    .logo-chip {
+      display: inline-flex; align-items: center; gap: 16px;
+      background: #fff; border-radius: 10px; padding: 12px 18px;
+    }
+    .logo-chip .sep { width: 1px; height: 38px; background: var(--bordo); }
+  </style>
+</head>
+
+<body>
+  <!-- Salta al contenuto: utile per tastiera e screen reader -->
+  <a class="skip" href="#main">Salta al contenuto principale</a>
+
+  <!-- ============================================================
+       Sprite SVG: definizione una volta sola dei loghi istituzionali,
+       riusati via <use> in intestazione e footer.
+       ============================================================ -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <!-- Stemma Regione Liguria — ricostruzione vettoriale fedele
+           Scudo con croce di San Giorgio rossa, quattro stelle a sei punte e
+           base a forma di U (ferro di cavallo) separata. -->
+      <symbol id="logo-regione" viewBox="0 0 160 205">
+        <!-- Scudo: lati dritti, top arrotondato, fondo piatto -->
+        <path d="M25 140 L25 35 Q25 15 50 15 L110 15 Q135 15 135 35 L135 140 Z" fill="#fff" stroke="#2B2B2B" stroke-width="2.5"/>
+        <!-- Croce di San Giorgio -->
+        <rect x="77" y="15" width="6" height="125" fill="#DA1F1F"/>
+        <rect x="25" y="74" width="110" height="6" fill="#DA1F1F"/>
+        <!-- Quattro stelle a sei punte nei quadranti -->
+        <g fill="#9E9E9E" stroke="#2B2B2B" stroke-width="0.5">
+          <polygon transform="translate(51,44)"  points="0,-13 2.75,-4.76 11.26,-6.5 5.5,0 11.26,6.5 2.75,4.76 0,13 -2.75,4.76 -11.26,6.5 -5.5,0 -11.26,-6.5 -2.75,-4.76"/>
+          <polygon transform="translate(109,44)" points="0,-13 2.75,-4.76 11.26,-6.5 5.5,0 11.26,6.5 2.75,4.76 0,13 -2.75,4.76 -11.26,6.5 -5.5,0 -11.26,-6.5 -2.75,-4.76"/>
+          <polygon transform="translate(51,110)" points="0,-13 2.75,-4.76 11.26,-6.5 5.5,0 11.26,6.5 2.75,4.76 0,13 -2.75,4.76 -11.26,6.5 -5.5,0 -11.26,-6.5 -2.75,-4.76"/>
+          <polygon transform="translate(109,110)" points="0,-13 2.75,-4.76 11.26,-6.5 5.5,0 11.26,6.5 2.75,4.76 0,13 -2.75,4.76 -11.26,6.5 -5.5,0 -11.26,-6.5 -2.75,-4.76"/>
+        </g>
+        <!-- Linea bisettrice verticale (sotto lo scudo, dentro la U) -->
+        <line x1="80" y1="140" x2="80" y2="193" stroke="#2B2B2B" stroke-width="1.5"/>
+        <!-- Base a forma di ferro di cavallo (banda semianulare aperta in alto) -->
+        <path d="M 28 160 A 52 52 0 0 1 132 160 L 115 160 A 35 35 0 0 0 45 160 Z" fill="#9E9E9E" stroke="#2B2B2B" stroke-width="2.5"/>
+      </symbol>
+
+      <!-- Logo ATS Liguria (ricostruzione tipografica) -->
+      <symbol id="logo-ats" viewBox="0 0 380 92">
+        <text x="2" y="52" font-family="-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-weight="700" font-size="54">
+          <tspan fill="#3FA535">ATS</tspan><tspan fill="#1F4E9D" dx="8">LIGURIA</tspan>
+        </text>
+        <text x="3" y="82" font-family="-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-weight="700" font-size="15" letter-spacing="0.4" fill="#1F4E9D">AZIENDA TUTELA DELLA SALUTE LIGURIA</text>
+      </symbol>
+
+      <!-- Gradient per la freccia circolare del logo Agenda viva -->
+      <linearGradient id="agArrowGrad" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0"  stop-color="#5BAFA5"/>
+        <stop offset="1"  stop-color="#6FBE5A"/>
+      </linearGradient>
+
+      <!-- Logo "Agenda viva — Ogni posto conta" (vettoriale) -->
+      <symbol id="logo-agendaviva" viewBox="0 0 600 320">
+        <!-- Freccia circolare di "rinnovo" attorno al calendario -->
+        <path d="M 60 200 A 115 115 0 1 1 285 130"
+              fill="none" stroke="url(#agArrowGrad)" stroke-width="13" stroke-linecap="round"/>
+        <polygon points="296,142 268,118 280,100" fill="#6FBE5A"/>
+
+        <!-- Corpo del calendario -->
+        <rect x="90" y="105" width="135" height="138" rx="9" fill="#1B3553"/>
+        <!-- Anelli/clip in alto -->
+        <rect x="113" y="92" width="7" height="22" rx="3" fill="#1B3553"/>
+        <rect x="195" y="92" width="7" height="22" rx="3" fill="#1B3553"/>
+
+        <!-- Griglia 4 × 3, una cella verde (lo slot recuperato) -->
+        <g fill="#B9C5D2">
+          <rect x="101" y="130" width="25" height="22" rx="3"/>
+          <rect x="130" y="130" width="25" height="22" rx="3"/>
+          <rect x="159" y="130" width="25" height="22" rx="3"/>
+          <rect x="188" y="130" width="25" height="22" rx="3"/>
+          <rect x="101" y="156" width="25" height="22" rx="3"/>
+          <rect x="130" y="156" width="25" height="22" rx="3"/>
+          <rect x="159" y="156" width="25" height="22" rx="3" fill="#3DA84A"/>
+          <rect x="188" y="156" width="25" height="22" rx="3"/>
+          <rect x="101" y="182" width="25" height="22" rx="3"/>
+          <rect x="130" y="182" width="25" height="22" rx="3"/>
+          <rect x="159" y="182" width="25" height="22" rx="3"/>
+          <rect x="188" y="182" width="25" height="22" rx="3"/>
+        </g>
+
+        <!-- Orologio in basso a destra del calendario -->
+        <circle cx="220" cy="230" r="30" fill="#1B3553"/>
+        <circle cx="220" cy="230" r="23" fill="#fff"/>
+        <line x1="220" y1="230" x2="220" y2="215" stroke="#1B3553" stroke-width="3" stroke-linecap="round"/>
+        <line x1="220" y1="230" x2="234" y2="230" stroke="#1B3553" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="220" cy="230" r="2.5" fill="#1B3553"/>
+
+        <!-- Wordmark: Agenda / Viva -->
+        <text x="305" y="148" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif"
+              font-weight="700" font-size="80" fill="#1B3553" letter-spacing="-1">Agenda</text>
+        <text x="305" y="234" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif"
+              font-weight="700" font-size="80" fill="#3DA89F" letter-spacing="-1">Viva</text>
+
+        <!-- Linea "battito" ECG sotto "Viva" -->
+        <path d="M 305 255 L 365 255 L 372 244 L 380 270 L 388 232 L 397 270 L 405 255 L 510 255"
+              fill="none" stroke="#3DA89F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+        <!-- Claim -->
+        <text x="305" y="298" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif"
+              font-weight="600" font-size="28" fill="#4A5E70">Ogni posto conta</text>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- ============================================================
+       Header + navbar sticky con ancore
+       ============================================================ -->
+  <header>
+    <!-- Barra istituzionale: ATS Liguria a sinistra, logo Agenda viva in alto a destra -->
+    <div class="instbar">
+      <div class="wrap instbar__inner">
+        <svg class="logo logo--ats" role="img" aria-label="ATS Liguria — Azienda tutela della salute Liguria"><use href="#logo-ats"/></svg>
+        <a class="brand-mark" href="agenda_viva.html" aria-label="Agenda viva — apri la pagina di chiusura con il logo a tutto schermo">
+          <svg class="logo logo--agendaviva" role="img" aria-label="Agenda viva — Ogni posto conta"><use href="#logo-agendaviva"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <nav class="nav" aria-label="Navigazione principale">
+      <div class="wrap nav__inner">
+        <a class="nav__brand" href="#hero" aria-label="Agenda viva — vai all'inizio">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="brand-text">
+            <span class="brand-name">Agenda viva</span>
+            <span class="brand-claim">Ogni posto conta</span>
+          </span>
+        </a>
+
+        <button class="nav__toggle" id="navToggle" aria-expanded="false" aria-controls="navLinks">
+          Menu
+        </button>
+
+        <div class="nav__links" id="navLinks">
+          <a href="#come-funziona">Come funziona</a>
+          <a href="#cosa-cambia">Cosa cambia per te</a>
+          <a href="#faq">Domande frequenti</a>
+          <a href="#problema">Il problema</a>
+          <a href="#meccanismo">Meccanismo</a>
+          <a href="#numeri">Numeri</a>
+          <a href="#garanzie">Garanzie</a>
+          <a href="#operatori">Per gli operatori</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main">
+
+    <!-- ========================================================
+         1. Hero
+         ======================================================== -->
+    <section class="hero" id="hero" aria-labelledby="hero-title">
+      <div class="wrap">
+        <!-- Identità del progetto: nome + claim -->
+        <p class="brand-line">
+          <span class="bn">Agenda viva</span>
+          <span class="bx" aria-hidden="true">·</span>
+          <span class="bc">ogni posto conta</span>
+        </p>
+        <span class="badge badge--cittadini">Per i cittadini</span>
+        <h1 id="hero-title">Liste di attesa più corte, senza nuovi macchinari</h1>
+        <p class="lead">
+          Il sistema recupera gli appuntamenti che si liberano e li dà a chi è in attesa
+          oltre i tempi previsti. Nessuna nuova attrezzatura: si usa meglio quella che c'è già.
+        </p>
+        <div class="hero__cta">
+          <a class="btn btn--primary" href="#come-funziona">Come funziona</a>
+          <a class="btn btn--ghost" href="#cosa-cambia">Cosa cambia per me</a>
+          <a class="btn btn--ghost" href="mockup_simulazione.html">Prova la simulazione</a>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider" aria-hidden="true" />
+
+    <!-- ========================================================
+         2. Come funziona — diagramma sintetico end-to-end
+         ======================================================== -->
+    <section class="section" id="come-funziona" aria-labelledby="cf-title">
+      <div class="wrap">
+        <span class="eyebrow">Il flusso in breve</span>
+        <h2 id="cf-title">Come funziona</h2>
+        <p class="lead">
+          Dal momento in cui un appuntamento si libera a quello in cui arriva la notifica:
+          sei stadi automatici, dietro le quinte.
+        </p>
+
+        <!-- Diagramma di flusso verticale e responsive -->
+        <div class="flow" style="margin-top: 28px;">
+
+          <!-- Stadio 1 -->
+          <div class="stage">
+            <span class="stage__num" aria-hidden="true">1</span>
+            <h3>Alimentazione delle disponibilità</h3>
+            <p>Due fonti convergono in un <strong>pool disponibilità</strong> aggiornato in tempo reale.</p>
+            <div class="subpool">
+              <div class="mini">
+                <h4>Capacità ordinaria</h4>
+                <p>Slot liberi dell'agenda CUP.</p>
+              </div>
+              <div class="mini">
+                <h4>Motore P</h4>
+                <p>Le prestazioni programmate non confermate liberano lo slot in anticipo.</p>
+              </div>
+            </div>
+          </div>
+          <div class="connector" aria-hidden="true"></div>
+
+          <!-- Stadio 2 -->
+          <div class="stage stage--teal">
+            <span class="stage__num" aria-hidden="true">2</span>
+            <h3>Domanda del paziente</h3>
+            <p>Visita → richiesta (impegnativa) → prenotazione sul CUP, come sempre.</p>
+          </div>
+          <div class="connector" aria-hidden="true"></div>
+
+          <!-- Stadio 3 -->
+          <div class="stage stage--ambra">
+            <span class="stage__num" aria-hidden="true">3</span>
+            <h3>Controllo dei tempi</h3>
+            <p>La data rientra nel tempo standard della classe (B/D)?</p>
+            <div class="outcome">
+              <span class="pill pill--ok">Sì → confermata, fine</span>
+              <span class="pill pill--no">No → lista di attesa automatica</span>
+            </div>
+          </div>
+          <div class="connector" aria-hidden="true"></div>
+
+          <!-- Stadio 4 -->
+          <div class="stage">
+            <span class="stage__num" aria-hidden="true">4</span>
+            <h3>Matching slot ↔ paziente</h3>
+            <p>Quando un nuovo slot entra nel pool, l'algoritmo lo abbina al paziente più idoneo.</p>
+          </div>
+          <div class="connector" aria-hidden="true"></div>
+
+          <!-- Stadio 5 -->
+          <div class="stage stage--teal">
+            <span class="stage__num" aria-hidden="true">5</span>
+            <h3>Offerta e conferma</h3>
+            <p>Proposta della nuova data con finestra di accettazione; se non accetta, passa al successivo.</p>
+          </div>
+          <div class="connector" aria-hidden="true"></div>
+
+          <!-- Stadio 6 -->
+          <div class="stage stage--ambra">
+            <span class="stage__num" aria-hidden="true">6</span>
+            <h3>Notifica all'utente finale</h3>
+            <p>Conferma multicanale, promemoria pre-appuntamento e aggiornamento dell'agenda CUP.</p>
+          </div>
+
+        </div>
+
+        <p style="margin-top:22px;">
+          <a href="#meccanismo">Vai al meccanismo in dettaglio →</a>
+        </p>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         3. Cosa cambia per te — percorso paziente in 4 passi
+         ======================================================== -->
+    <section class="section section--alt" id="cosa-cambia" aria-labelledby="cc-title">
+      <div class="wrap">
+        <span class="badge badge--cittadini">Per i cittadini</span>
+        <h2 id="cc-title">Cosa cambia per te</h2>
+        <p class="lead">Quattro passi semplici: il tuo percorso resta lo stesso, il sistema lavora per te.</p>
+
+        <div class="grid grid--4 steps" style="margin-top: 26px;">
+          <div class="card">
+            <span class="step__n" aria-hidden="true">1</span>
+            <h3>Vai dal medico</h3>
+            <p>Esci con la richiesta (l'impegnativa) per la prestazione di cui hai bisogno.</p>
+          </div>
+          <div class="card">
+            <span class="step__n" aria-hidden="true">2</span>
+            <h3>Prenoti sul CUP</h3>
+            <p>Prenoti come hai sempre fatto, senza passaggi aggiuntivi.</p>
+          </div>
+          <div class="card">
+            <span class="step__n" aria-hidden="true">3</span>
+            <h3>Controllo dei tempi</h3>
+            <p>Se la data rientra nei tempi standard, sei a posto. Se li supera, il sistema ti mette in una lista automatica.</p>
+          </div>
+          <div class="card">
+            <span class="step__n" aria-hidden="true">4</span>
+            <h3>Ricevi la notifica</h3>
+            <p>Appena si libera una data anticipata, ti avvisa. Niente da fare: ci pensa il sistema.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         4. Domande frequenti — accordion
+         ======================================================== -->
+    <section class="section" id="faq" aria-labelledby="faq-title">
+      <div class="wrap">
+        <span class="eyebrow">In parole semplici</span>
+        <h2 id="faq-title">Domande frequenti</h2>
+
+        <div class="faq" style="margin-top: 22px; max-width: 760px;">
+          <details>
+            <summary>E se non confermo la mia prestazione programmata? <span class="chev" aria-hidden="true">▾</span></summary>
+            <div class="answer"><p>Il posto viene liberato e dato a chi è in attesa con urgenza. Potrai comunque riprenotare.</p></div>
+          </details>
+          <details>
+            <summary>Devo fare qualcosa per avere una data anticipata? <span class="chev" aria-hidden="true">▾</span></summary>
+            <div class="answer"><p>No: se sei oltre i tempi standard, ci pensa il sistema e ti avvisa.</p></div>
+          </details>
+          <details>
+            <summary>E se so in anticipo che non potrò venire al mio appuntamento? <span class="chev" aria-hidden="true">▾</span></summary>
+            <div class="answer"><p>Puoi liberare il posto subito dall'app con un tocco ("non posso, libera il mio posto"): entra immediatamente nel pool e va a chi è in attesa con urgenza. Potrai poi riprenotare.</p></div>
+          </details>
+          <details>
+            <summary>E se non uso lo smartphone? <span class="chev" aria-hidden="true">▾</span></summary>
+            <div class="answer"><p>C'è un canale telefonico assistito: nessuno viene escluso.</p></div>
+          </details>
+          <details>
+            <summary>I miei dati sono al sicuro? <span class="chev" aria-hidden="true">▾</span></summary>
+            <div class="answer"><p>Sì, trattati secondo la normativa vigente e con il tuo consenso.</p></div>
+          </details>
+          <details>
+            <summary>Questo crea nuovi esami o nuovi macchinari? <span class="chev" aria-hidden="true">▾</span></summary>
+            <div class="answer"><p>No: usa meglio la capacità esistente, recuperando gli appuntamenti che si liberano.</p></div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider" aria-hidden="true" />
+
+    <!-- ========================================================
+         5. Il problema — classi di priorità B/D/P
+         ======================================================== -->
+    <section class="section section--alt" id="problema" aria-labelledby="prob-title">
+      <div class="wrap">
+        <span class="badge badge--addetti">Per gli addetti ai lavori</span>
+        <h2 id="prob-title">Il problema</h2>
+        <p class="lead">
+          Le liste di attesa nascono dal divario tra domanda e capacità. La normativa
+          classifica le prestazioni per priorità, con tempi target diversi.
+        </p>
+
+        <div class="grid grid--3" style="margin-top: 26px;">
+          <div class="card prio prio--b">
+            <span class="tag">B</span>
+            <h3>Breve</h3>
+            <p>Entro <strong>10 giorni</strong>.</p>
+          </div>
+          <div class="card prio prio--d">
+            <span class="tag">D</span>
+            <h3>Differita</h3>
+            <p>Entro <strong>30 giorni</strong> (visite) / <strong>60 giorni</strong> (accertamenti).</p>
+          </div>
+          <div class="card prio prio--p">
+            <span class="tag">P</span>
+            <h3>Programmata</h3>
+            <p>Di norma entro <strong>120 giorni</strong>.</p>
+          </div>
+        </div>
+
+        <p class="note">
+          B e D sono spesso fuori target; le P possono attendere. Le P sono quindi la
+          fonte sicura da cui recuperare capacità per le classi urgenti.
+        </p>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         6. Il meccanismo in dettaglio — 6 stadi con regole
+         ======================================================== -->
+    <section class="section" id="meccanismo" aria-labelledby="mec-title">
+      <div class="wrap">
+        <span class="badge badge--addetti">Per gli addetti ai lavori</span>
+        <h2 id="mec-title">Il meccanismo in dettaglio</h2>
+        <p class="lead">I sei stadi del flusso, con le regole operative di ciascuno.</p>
+
+        <div class="flow" style="margin-top: 28px;">
+
+          <!-- Stadio 1 -->
+          <div class="stage">
+            <span class="stage__num" aria-hidden="true">1</span>
+            <h3>Alimentazione delle disponibilità</h3>
+            <p>Due fonti convergono in un pool disponibilità aggiornato in tempo reale.</p>
+            <div class="subpool">
+              <div class="mini">
+                <h4>Capacità ordinaria</h4>
+                <p>Slot liberi dell'agenda CUP, disponibili senza alcun intervento aggiuntivo.</p>
+              </div>
+              <div class="mini">
+                <h4>Motore P</h4>
+                <p>A 10 giorni dalla data, la P riceve richiesta di conferma presenza. Se non conferma entro 24 ore, lo slot viene liberato (~9 giorni di anticipo) ed entra nel pool.</p>
+              </div>
+              <div class="mini">
+                <h4>Rilascio volontario</h4>
+                <p>Chi sa di non poter venire può liberare il proprio posto in qualsiasi momento, con un tocco dall'app. Lo slot entra subito nel pool.</p>
+              </div>
+            </div>
+          </div>
+          <div class="connector" aria-hidden="true"></div>
+
+          <!-- Stadio 2 -->
+          <div class="stage stage--teal">
+            <span class="stage__num" aria-hidden="true">2</span>
+            <h3>Domanda del paziente</h3>
+            <p>Visita → richiesta → prenotazione sul CUP. Il percorso del cittadino non cambia.</p>
+          </div>
+          <div class="connector" aria-hidden="true"></div>
+
+          <!-- Stadio 3 -->
+          <div class="stage stage--ambra">
+            <span class="stage__num" aria-hidden="true">3</span>
+            <h3>Controllo dei tempi</h3>
+            <p>Si verifica se la data proposta rientra nel tempo standard della classe (B/D).</p>
+            <div class="outcome">
+              <span class="pill pill--ok">Sì → prenotazione confermata, fine percorso</span>
+              <span class="pill pill--no">No → iscrizione alla lista di attesa automatica</span>
+            </div>
+          </div>
+          <div class="connector" aria-hidden="true"></div>
+
+          <!-- Stadio 4 -->
+          <div class="stage">
+            <span class="stage__num" aria-hidden="true">4</span>
+            <h3>Matching slot ↔ paziente</h3>
+            <p>Quando un nuovo slot entra nel pool, l'algoritmo lo abbina al paziente più idoneo per:</p>
+            <ul class="clean">
+              <li>priorità clinica in coda <strong>(B → D → P)</strong>: prima le urgenze;</li>
+              <li>tempo di attesa accumulato;</li>
+              <li>disciplina / prestazione compatibile;</li>
+              <li>sede tra quelle indicate dal paziente;</li>
+              <li><strong>modello IA</strong> · storia clinica del paziente e affidabilità storica delle prenotazioni precedenti;</li>
+              <li>regola di equità.</li>
+            </ul>
+          </div>
+          <div class="connector" aria-hidden="true"></div>
+
+          <!-- Stadio 5 -->
+          <div class="stage stage--teal">
+            <span class="stage__num" aria-hidden="true">5</span>
+            <h3>Offerta e conferma</h3>
+            <p>Proposta della nuova data con finestra di accettazione di <strong>24-48 ore</strong>. Se il paziente non accetta, lo slot passa al successivo in lista.</p>
+          </div>
+          <div class="connector" aria-hidden="true"></div>
+
+          <!-- Stadio 6 -->
+          <div class="stage stage--ambra">
+            <span class="stage__num" aria-hidden="true">6</span>
+            <h3>Notifica all'utente finale</h3>
+            <p>Conferma multicanale (SMS / app / e-mail, più telefono per i non digitali), promemoria pre-appuntamento e aggiornamento automatico dell'agenda CUP.</p>
+          </div>
+
+        </div>
+
+        <!-- Fascia trasversale: governance ed equità -->
+        <div class="ribbon">
+          <h3>Governance ed equità</h3>
+          <ul>
+            <li>Monitoraggio degli slot recuperati e della riduzione dei tempi.</li>
+            <li>Tutela delle persone fragili e degli anziani.</li>
+            <li>Privacy e consenso al trattamento dei dati.</li>
+            <li>Regola chiara per i non confermanti.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         7. I numeri e l'impatto — stat card illustrative
+         ======================================================== -->
+    <section class="section section--alt" id="numeri" aria-labelledby="num-title">
+      <div class="wrap">
+        <span class="badge badge--addetti">Per gli addetti ai lavori</span>
+        <h2 id="num-title">I numeri e l'impatto</h2>
+        <span class="illustrative">Valori illustrativi da modello</span>
+
+        <div class="grid grid--4" style="margin-top: 8px;">
+          <div class="card stat">
+            <span class="big">~57</span>
+            <span class="lbl">slot riassegnati ogni 1.000 prenotazioni</span>
+          </div>
+          <div class="card stat">
+            <span class="big">+10%</span>
+            <span class="lbl">capacità dedicata alle classi urgenti B e D</span>
+          </div>
+          <div class="card stat">
+            <span class="big">84 → 39</span>
+            <span class="lbl">classe D, giorni di attesa (target 60)</span>
+          </div>
+          <div class="card stat">
+            <span class="big">22 → 11</span>
+            <span class="lbl">classe B, giorni di attesa (target 10)</span>
+          </div>
+        </div>
+
+        <p class="note" style="margin-top: 24px;">
+          Stime da modello di coda, scenario centrale (quota P 45%, mancata conferma P 15%,
+          efficienza riassegnazione 85%). Non sono una previsione gestionale certificata.
+        </p>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         8. Fattibilità e garanzie
+         ======================================================== -->
+    <section class="section" id="garanzie" aria-labelledby="gar-title">
+      <div class="wrap">
+        <span class="badge badge--addetti">Per gli addetti ai lavori</span>
+        <h2 id="gar-title">Fattibilità e garanzie</h2>
+        <p class="lead">Il sistema è progettato per essere equo, sicuro e prudente.</p>
+
+        <div class="grid grid--2" style="margin-top: 26px;">
+          <div class="card">
+            <h3>Equità</h3>
+            <p>Canale non digitale (call center) e tutela esplicita di anziani e persone fragili.</p>
+          </div>
+          <div class="card">
+            <h3>Solo le P vengono mai liberate</h3>
+            <p>Nessun paziente urgente viene cancellato: si recupera solo da prestazioni programmate non confermate.</p>
+          </div>
+          <div class="card">
+            <h3>Date certe</h3>
+            <p>Si offre uno slot solo quando è effettivamente libero, mai in previsione.</p>
+          </div>
+          <div class="card">
+            <h3>Privacy</h3>
+            <p>Gestione dei dati conforme alla normativa, con consenso dell'interessato.</p>
+          </div>
+          <div class="card" style="grid-column: 1 / -1;">
+            <h3>Recupero, non miracoli</h3>
+            <p>Il sistema riduce le liste recuperando sprechi e riallocando capacità. Dove la domanda supera strutturalmente l'offerta, riduce ma non azzera.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         9. Per gli operatori — nota tecnica
+         ======================================================== -->
+    <section class="section section--alt" id="operatori" aria-labelledby="op-title">
+      <div class="wrap">
+        <span class="badge badge--addetti">Per gli addetti ai lavori</span>
+        <h2 id="op-title">Per gli operatori</h2>
+        <p class="lead">Architettura, integrazione e governance in sintesi, per direzioni sanitarie, ASL e operatori CUP.</p>
+
+        <div class="grid grid--3" style="margin-top: 26px;">
+          <div class="card">
+            <h3>Architettura</h3>
+            <p>Motore di matching e pool disponibilità come servizio sopra i sistemi esistenti, senza nuove attrezzature cliniche.</p>
+          </div>
+          <div class="card">
+            <h3>Integrazione CUP</h3>
+            <p>Si collega all'agenda CUP per leggere gli slot liberi e scrivere conferme e aggiornamenti.</p>
+          </div>
+          <div class="card">
+            <h3>Notifiche</h3>
+            <p>Multicanale (SMS, app, e-mail) con fallback telefonico assistito per i non digitali.</p>
+          </div>
+          <div class="card">
+            <h3>Governance</h3>
+            <p>Regole di priorità ed equità configurabili, audit e monitoraggio degli indicatori.</p>
+          </div>
+          <div class="card">
+            <h3>Pilota</h3>
+            <p>Avvio su poche discipline ad alta domanda, con valutazione prima dell'estensione.</p>
+          </div>
+          <div class="card">
+            <h3>Indicatori</h3>
+            <p>Slot recuperati, riduzione dei tempi per classe, tasso di accettazione delle offerte.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================================
+       10. Footer — disclaimer, fonti, riferimenti
+       ======================================================== -->
+  <footer class="footer" id="footer">
+    <div class="wrap">
+      <div class="footer-logos">
+        <span class="logo-chip">
+          <svg class="logo logo--ats" role="img" aria-label="ATS Liguria — Azienda tutela della salute Liguria"><use href="#logo-ats"/></svg>
+          <span class="brand-divider" aria-hidden="true"></span>
+          <svg class="logo logo--agendaviva" role="img" aria-label="Agenda viva — Ogni posto conta"><use href="#logo-agendaviva"/></svg>
+        </span>
+      </div>
+
+      <h3>Nota e disclaimer</h3>
+      <p class="disclaimer">
+        Strumento a supporto decisionale e divulgativo; non costituisce una previsione gestionale certificata.
+      </p>
+
+      <hr />
+
+      <div class="grid grid--2">
+        <div>
+          <h3>Fonti dei dati</h3>
+          <p><small>Dati di base: ISTAT; monitoraggio tempi d'attesa ATS Liguria. Tutti i valori numerici riportati sono illustrativi da modello.</small></p>
+        </div>
+        <div>
+          <h3>Contatti e riferimenti</h3>
+          <p><small>Pagina divulgativa a scopo informativo. Per i dettagli operativi rivolgersi alla direzione sanitaria di riferimento e al CUP territoriale.</small></p>
+        </div>
+      </div>
+
+      <hr />
+      <p><small>© 2026 — Pagina informativa sul recupero automatico degli appuntamenti sanitari.</small></p>
+    </div>
+  </footer>
+
+  <!-- Pulsante "torna su" -->
+  <button class="top" id="toTop" aria-label="Torna all'inizio della pagina">↑</button>
+
+  <script>
+    /* ============================================================
+       JS: toggle menu mobile, pulsante "torna su"
+       Tutto vanilla, nessuna dipendenza esterna.
+       ============================================================ */
+
+    // --- Menu mobile: mostra/nasconde i link e aggiorna aria-expanded ---
+    (function () {
+      var toggle = document.getElementById('navToggle');
+      var links  = document.getElementById('navLinks');
+
+      function isMobile() { return window.matchMedia('(max-width: 860px)').matches; }
+
+      // Stato iniziale: su mobile il menu parte chiuso
+      function syncInitial() {
+        if (isMobile()) { links.hidden = true; toggle.setAttribute('aria-expanded', 'false'); }
+        else            { links.hidden = false; }
+      }
+      syncInitial();
+      window.addEventListener('resize', syncInitial);
+
+      toggle.addEventListener('click', function () {
+        var open = links.hidden;
+        links.hidden = !open;
+        toggle.setAttribute('aria-expanded', String(open));
+      });
+
+      // Chiudi il menu dopo aver scelto una voce (solo su mobile)
+      links.addEventListener('click', function (e) {
+        if (e.target.tagName === 'A' && isMobile()) {
+          links.hidden = true;
+          toggle.setAttribute('aria-expanded', 'false');
+        }
+      });
+    })();
+
+    // --- Pulsante "torna su": compare dopo un po' di scroll ---
+    (function () {
+      var btn = document.getElementById('toTop');
+      function onScroll() {
+        if (window.scrollY > 600) btn.classList.add('show');
+        else                      btn.classList.remove('show');
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+
+      btn.addEventListener('click', function () {
+        // Rispetta prefers-reduced-motion: niente scroll animato se richiesto
+        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+        // Riporta il focus all'inizio per la navigazione da tastiera
+        document.getElementById('main').focus({ preventScroll: true });
+      });
+    })();
+  </script>
+</body>
+</html>
