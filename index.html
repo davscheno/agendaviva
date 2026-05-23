@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agenda viva — Mockup interattivo | Ogni posto conta</title>
+  <meta name="description" content="Agenda viva — simulazione passo-passo del sistema di riassegnazione automatica: dalla prenotazione sul CUP senza disponibilità, alla liberazione di uno slot, fino alla nuova data per il cittadino." />
+
+  <style>
+    /* ============================================================
+       Palette condivisa con il sito istituzionale
+       ============================================================ */
+    :root {
+      --blu: #185FA5; --teal: #0F6E56; --ambra: #B07206; --rosso: #A32D2D;
+      --testo: #16202B; --testo-sec: #5B6B7A; --sfondo: #F4F6F8;
+      --bianco: #FFFFFF; --bordo: #DAE0E6; --raggio: 12px;
+      --ombra: 0 1px 3px rgba(22,32,43,.08), 0 1px 2px rgba(22,32,43,.04);
+      --ombra-lg: 0 8px 24px rgba(22,32,43,.12);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--sfondo); color: var(--testo);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 17px; line-height: 1.55; -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, h4 { font-weight: 600; line-height: 1.25; margin: 0; }
+    h1 { font-size: clamp(1.5rem, 3.5vw, 2rem); }
+    p { margin: 0 0 .8em; }
+    a { color: var(--blu); }
+
+    /* Focus visibile (navigazione da tastiera) */
+    button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+      outline: 3px solid var(--ambra); outline-offset: 2px; border-radius: 6px;
+    }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+    }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 18px; }
+
+    /* ============================================================
+       Header
+       ============================================================ */
+    .top {
+      background: var(--bianco); border-bottom: 1px solid var(--bordo);
+      padding: 18px 0;
+    }
+    /* Lockup brand: ATS Liguria + Agenda viva (header del mockup) */
+    .toplogos {
+      display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
+      margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--bordo);
+    }
+    .logo { display: block; }
+    .logo--ats { width: 195px; height: 47px; }   /* aspect 380:92 — prominente */
+    .brand-divider { width: 1px; align-self: stretch; min-height: 54px; background: var(--bordo); }
+    .brand-titles { display: flex; flex-direction: column; gap: 4px; }
+    .brand-name-lg {
+      display: inline-flex; align-items: center; gap: 12px;
+      font-size: clamp(1.45rem, 3.4vw, 2rem);
+      font-weight: 600; color: var(--blu); letter-spacing: -.01em; line-height: 1.05;
+    }
+    .brand-claim-lg {
+      font-size: clamp(.95rem, 1.7vw, 1.05rem);
+      font-style: italic; color: var(--teal); letter-spacing: .01em;
+    }
+    .pulse {
+      width: 12px; height: 12px; border-radius: 50%; background: var(--teal); flex: none;
+      box-shadow: 0 0 0 0 rgba(15, 110, 86, .45);
+      animation: agendaPulse 2.2s ease-out infinite;
+    }
+    @keyframes agendaPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(15, 110, 86, .45); }
+      70%  { box-shadow: 0 0 0 12px rgba(15, 110, 86, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(15, 110, 86, 0); }
+    }
+    @media (max-width: 560px) {
+      .brand-divider { display: none; }
+      .logo--ats { width: 168px; height: 41px; }
+    }
+
+    /* Etichetta IA inline (criterio di matching) */
+    .ia-pill {
+      display: inline-block; font-size: .7rem; font-weight: 600;
+      color: var(--teal); background: #EAF1EE; border: 1px solid #B7D3C8;
+      border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: middle;
+    }
+    .top .eyebrow {
+      font-size: .78rem; font-weight: 600; letter-spacing: .04em; color: var(--teal);
+      text-transform: none;
+    }
+    .top .home { font-size: .9rem; }
+
+    /* ============================================================
+       Stepper di avanzamento
+       ============================================================ */
+    .stepper {
+      display: flex; gap: 6px; flex-wrap: wrap; margin: 18px 0 6px; padding: 0; list-style: none;
+    }
+    .stepper li {
+      flex: 1 1 90px; min-width: 90px; font-size: .72rem; color: var(--testo-sec);
+      border-top: 4px solid var(--bordo); padding-top: 6px; line-height: 1.2;
+    }
+    .stepper li[data-state="done"]    { border-top-color: var(--teal); color: var(--teal); }
+    .stepper li[data-state="current"] { border-top-color: var(--blu); color: var(--blu); font-weight: 600; }
+
+    /* ============================================================
+       Layout principale: scena + pannello stato
+       ============================================================ */
+    .layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; padding: 26px 0 48px; align-items: start; }
+    @media (max-width: 880px) { .layout { grid-template-columns: 1fr; } }
+
+    .actor {
+      display: inline-flex; align-items: center; gap: 8px; font-size: .8rem; font-weight: 600;
+      padding: 4px 12px; border-radius: 999px; margin-bottom: 14px;
+    }
+    .actor .dot { width: 9px; height: 9px; border-radius: 50%; }
+    .actor--cup     { background: #E5F0F9; color: var(--blu); }
+    .actor--cup .dot{ background: var(--blu); }
+    .actor--cit     { background: #EAF1EE; color: var(--teal); }
+    .actor--cit .dot{ background: var(--teal); }
+    .actor--p       { background: #FBF3E2; color: var(--ambra); }
+    .actor--p .dot  { background: var(--ambra); }
+    .actor--sys     { background: #EEF0F2; color: var(--testo-sec); }
+    .actor--sys .dot{ background: var(--testo-sec); }
+
+    .scene-title { margin-bottom: 6px; }
+    .scene-caption { color: var(--testo-sec); max-width: 60ch; margin-bottom: 18px; }
+
+    /* ============================================================
+       Device: finestra "CUP" (desktop)
+       ============================================================ */
+    .device { margin: 0 auto; }
+    .window {
+      background: var(--bianco); border: 1px solid var(--bordo); border-radius: var(--raggio);
+      box-shadow: var(--ombra-lg); overflow: hidden;
+    }
+    .window__bar {
+      display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+      background: #EEF1F4; border-bottom: 1px solid var(--bordo);
+    }
+    .window__bar .b { width: 11px; height: 11px; border-radius: 50%; background: #C7CFD7; }
+    .window__bar .url {
+      margin-left: 8px; font-size: .8rem; color: var(--testo-sec);
+      background: #fff; border: 1px solid var(--bordo); border-radius: 6px; padding: 3px 10px;
+    }
+    .window__body { padding: 22px; }
+
+    /* Form CUP simulato */
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: .85rem; color: var(--testo-sec); margin-bottom: 4px; }
+    .field .control {
+      border: 1px solid var(--bordo); border-radius: 8px; padding: 11px 13px; background: #FBFCFD;
+      font-size: .98rem;
+    }
+    .field .control.read { color: var(--testo); }
+
+    .result {
+      border: 1px solid var(--bordo); border-radius: 8px; padding: 16px; margin-top: 6px;
+      background: #FBFCFD;
+    }
+    .result.alert { border-color: #E3B7B7; background: #FBEEEE; }
+    .result.ok    { border-color: #B7D3C8; background: #EAF1EE; }
+    .result .row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
+    .result .row b { font-weight: 600; }
+    .alert-line { color: var(--rosso); font-weight: 600; display: flex; gap: 8px; align-items: baseline; }
+    .ok-line    { color: var(--teal); font-weight: 600; display: flex; gap: 8px; align-items: baseline; }
+
+    /* Consenso */
+    .consent {
+      display: flex; gap: 10px; align-items: flex-start; margin-top: 14px;
+      background: #fff; border: 1px solid var(--bordo); border-radius: 8px; padding: 12px 14px;
+    }
+    .consent input { margin-top: 4px; width: 18px; height: 18px; accent-color: var(--blu); }
+    .consent label { font-size: .92rem; color: var(--testo); }
+
+    /* Selezione sedi preferite con ordinamento IA per distanza */
+    .sedi-head {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 8px; flex-wrap: wrap; margin-bottom: 6px;
+    }
+    .sedi-head > label { margin: 0; }
+    .ai-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .72rem; font-weight: 600; color: var(--teal);
+      background: #EAF1EE; border: 1px solid #B7D3C8; border-radius: 999px; padding: 3px 10px;
+    }
+    .ai-tag .spark { font-size: .9rem; line-height: 1; }
+    .sedi-list {
+      display: grid; gap: 2px;
+      border: 1px solid var(--bordo); border-radius: 8px; background: #FBFCFD; padding: 4px;
+    }
+    .sede-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 10px; border-radius: 6px; cursor: pointer; font-size: .95rem;
+    }
+    .sede-row:hover { background: #F4F6F8; }
+    .sede-row input[type="checkbox"] {
+      width: 18px; height: 18px; accent-color: var(--blu); margin: 0; flex: none;
+    }
+    .sede-name { flex: 1; }
+    .sede-dist {
+      font-size: .85rem; color: var(--testo-sec); white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .sedi-help { font-size: .82rem; color: var(--testo-sec); margin: 8px 2px 0; }
+
+    /* ============================================================
+       Device: telefono (cittadino)
+       ============================================================ */
+    .phone {
+      width: 300px; max-width: 100%; margin: 0 auto;
+      background: #0E1620; border-radius: 34px; padding: 14px; box-shadow: var(--ombra-lg);
+    }
+    .phone__notch { width: 120px; height: 22px; background: #0E1620; border-radius: 0 0 14px 14px; margin: -14px auto 8px; }
+    .phone__screen { background: var(--sfondo); border-radius: 22px; overflow: hidden; min-height: 380px; }
+    .phone__status { display: flex; justify-content: space-between; font-size: .72rem; color: var(--testo-sec); padding: 8px 16px 2px; }
+    .phone__app { padding: 12px 14px 18px; }
+
+    /* Notifica push */
+    .push {
+      background: #fff; border: 1px solid var(--bordo); border-radius: 14px; padding: 12px 14px;
+      box-shadow: var(--ombra); margin-bottom: 12px;
+    }
+    .push__head { display: flex; align-items: center; gap: 8px; font-size: .76rem; color: var(--testo-sec); margin-bottom: 6px; }
+    .push__head .ic { width: 22px; height: 22px; border-radius: 6px; background: var(--blu); color: #fff; display: flex; align-items: center; justify-content: center; font-size: .8rem; }
+    .push__title { font-weight: 600; font-size: .95rem; margin-bottom: 2px; }
+    .push__text { font-size: .9rem; color: var(--testo); }
+
+    .ticket {
+      background: #fff; border: 1px solid var(--bordo); border-radius: 14px; padding: 14px; box-shadow: var(--ombra);
+    }
+    .ticket .big-date { font-size: 1.5rem; font-weight: 600; color: var(--blu); }
+    .ticket .row { display: flex; justify-content: space-between; padding: 3px 0; font-size: .9rem; }
+    .ticket .row span:first-child { color: var(--testo-sec); }
+
+    /* Countdown / motore P */
+    .countdown {
+      display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--ambra);
+      background: #FBF3E2; border: 1px solid #EAD9B4; border-radius: 999px; padding: 6px 14px; font-size: .9rem;
+    }
+
+    /* Badge classe priorità */
+    .klass { display: inline-block; font-weight: 600; font-size: .8rem; padding: 2px 9px; border-radius: 6px; }
+    .klass--d { background: #FBF3E2; color: var(--ambra); }
+    .klass--p { background: #EAF1EE; color: var(--teal); }
+
+    /* Lista criteri matching */
+    .match { list-style: none; padding: 0; margin: 8px 0 0; }
+    .match li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px dashed var(--bordo); font-size: .95rem; }
+    .match li:last-child { border-bottom: none; }
+    .match .chk { color: var(--teal); font-weight: 700; }
+
+    .pool-flash {
+      display: inline-flex; align-items: center; gap: 8px; font-size: .9rem; font-weight: 600;
+      color: var(--teal); background: #EAF1EE; border: 1px solid #B7D3C8; border-radius: 8px; padding: 8px 12px; margin-top: 12px;
+    }
+
+    /* Pulsante "nudge" self-service dentro l'app del cittadino */
+    .nudge-btn {
+      width: 100%; margin-top: 12px; cursor: pointer; font: inherit; font-weight: 600;
+      background: #fff; border: 1px solid var(--blu); color: var(--blu);
+      border-radius: 12px; padding: 12px 14px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .nudge-btn:hover { background: #EEF3F8; }
+    .nudge-help { text-align: center; font-size: .78rem; color: var(--testo-sec); margin-top: 6px; }
+
+    /* ============================================================
+       Controlli (avanti / indietro / azione)
+       ============================================================ */
+    .controls {
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 22px;
+    }
+    .btn {
+      font: inherit; font-weight: 600; border-radius: 8px; padding: 12px 22px; cursor: pointer;
+      border: 1px solid transparent;
+    }
+    .btn--primary { background: var(--blu); color: #fff; }
+    .btn--primary:hover:not(:disabled) { background: #134d85; }
+    .btn--primary:disabled { background: #9FB6CD; cursor: not-allowed; }
+    .btn--ghost { background: #fff; color: var(--blu); border-color: var(--blu); }
+    .btn--ghost:hover { background: #EEF3F8; }
+    .btn--ghost:disabled { color: #9FB6CD; border-color: #C7D3DF; cursor: not-allowed; }
+    .btn--ambra { background: var(--ambra); color: #fff; }
+    .btn--ambra:hover { background: #8f5d05; }
+    .step-count { color: var(--testo-sec); font-size: .9rem; margin-left: auto; }
+
+    /* ============================================================
+       Pannello stato (sticky su desktop)
+       ============================================================ */
+    .panel { position: sticky; top: 18px; display: grid; gap: 16px; }
+    .card {
+      background: var(--bianco); border: 1px solid var(--bordo); border-radius: var(--raggio);
+      box-shadow: var(--ombra); padding: 16px 18px;
+    }
+    .card h3 { font-size: .95rem; margin-bottom: 10px; color: var(--blu); }
+    .kv { display: flex; justify-content: space-between; gap: 10px; font-size: .9rem; padding: 4px 0; }
+    .kv span:first-child { color: var(--testo-sec); }
+    .kv b { font-weight: 600; }
+    .status-tag { font-size: .78rem; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+    .status-tag.waiting { background: #FBF3E2; color: var(--ambra); }
+    .status-tag.listed  { background: #E5F0F9; color: var(--blu); }
+    .status-tag.matched { background: #EAF1EE; color: var(--teal); }
+    .status-tag.booked  { background: #EAF1EE; color: var(--teal); }
+
+    .pool-count { font-size: 2rem; font-weight: 600; color: var(--teal); line-height: 1; }
+    .pool-sub { font-size: .82rem; color: var(--testo-sec); }
+
+    .disclaimer {
+      font-size: .8rem; color: var(--testo-sec); border-left: 3px solid var(--ambra);
+      padding-left: 12px; margin-top: 4px;
+    }
+
+    /* Animazione di ingresso scena (disattivata da reduced-motion) */
+    .fade { animation: fade .25s ease; }
+    @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  </style>
+</head>
+
+<body>
+
+  <!-- ============================================================
+       Sprite SVG: loghi istituzionali definiti una volta sola
+       ============================================================ -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="logo-regione" viewBox="0 0 160 205">
+        <path d="M25 140 L25 35 Q25 15 50 15 L110 15 Q135 15 135 35 L135 140 Z" fill="#fff" stroke="#2B2B2B" stroke-width="2.5"/>
+        <rect x="77" y="15" width="6" height="125" fill="#DA1F1F"/>
+        <rect x="25" y="74" width="110" height="6" fill="#DA1F1F"/>
+        <g fill="#9E9E9E" stroke="#2B2B2B" stroke-width="0.5">
+          <polygon transform="translate(51,44)"  points="0,-13 2.75,-4.76 11.26,-6.5 5.5,0 11.26,6.5 2.75,4.76 0,13 -2.75,4.76 -11.26,6.5 -5.5,0 -11.26,-6.5 -2.75,-4.76"/>
+          <polygon transform="translate(109,44)" points="0,-13 2.75,-4.76 11.26,-6.5 5.5,0 11.26,6.5 2.75,4.76 0,13 -2.75,4.76 -11.26,6.5 -5.5,0 -11.26,-6.5 -2.75,-4.76"/>
+          <polygon transform="translate(51,110)" points="0,-13 2.75,-4.76 11.26,-6.5 5.5,0 11.26,6.5 2.75,4.76 0,13 -2.75,4.76 -11.26,6.5 -5.5,0 -11.26,-6.5 -2.75,-4.76"/>
+          <polygon transform="translate(109,110)" points="0,-13 2.75,-4.76 11.26,-6.5 5.5,0 11.26,6.5 2.75,4.76 0,13 -2.75,4.76 -11.26,6.5 -5.5,0 -11.26,-6.5 -2.75,-4.76"/>
+        </g>
+        <line x1="80" y1="140" x2="80" y2="193" stroke="#2B2B2B" stroke-width="1.5"/>
+        <path d="M 28 160 A 52 52 0 0 1 132 160 L 115 160 A 35 35 0 0 0 45 160 Z" fill="#9E9E9E" stroke="#2B2B2B" stroke-width="2.5"/>
+      </symbol>
+      <symbol id="logo-ats" viewBox="0 0 380 92">
+        <text x="2" y="52" font-family="-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-weight="700" font-size="54">
+          <tspan fill="#3FA535">ATS</tspan><tspan fill="#1F4E9D" dx="8">LIGURIA</tspan>
+        </text>
+        <text x="3" y="82" font-family="-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-weight="700" font-size="15" letter-spacing="0.4" fill="#1F4E9D">AZIENDA TUTELA DELLA SALUTE LIGURIA</text>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- ============================================================
+       Header
+       ============================================================ -->
+  <header class="top">
+    <div class="wrap">
+      <!-- Lockup ATS Liguria + identità di progetto Agenda viva -->
+      <div class="toplogos">
+        <svg class="logo logo--ats" role="img" aria-label="ATS Liguria — Azienda tutela della salute Liguria"><use href="#logo-ats"/></svg>
+        <span class="brand-divider" aria-hidden="true"></span>
+        <div class="brand-titles">
+          <span class="brand-name-lg">
+            <span class="pulse" aria-hidden="true"></span>
+            Agenda viva
+          </span>
+          <span class="brand-claim-lg">ogni posto conta — l’agenda che recupera ogni opportunità</span>
+        </div>
+      </div>
+      <span class="eyebrow">Mockup interattivo · valori illustrativi da modello</span>
+      <h1>Come funziona, passo per passo</h1>
+      <p style="margin:.4em 0 0; color:var(--testo-sec);">
+        Segui il ciclo completo: dalla prenotazione senza posto, allo slot che si libera, fino alla nuova data.
+        <a class="home" href="liste_attesa.html">← Torna al sito</a>
+      </p>
+
+      <!-- Stepper di avanzamento (aggiornato via JS) -->
+      <ol class="stepper" id="stepper" aria-label="Avanzamento della simulazione"></ol>
+    </div>
+  </header>
+
+  <!-- Annuncio per screen reader al cambio scena -->
+  <div class="sr-only" role="status" aria-live="polite" id="live"></div>
+
+  <main class="wrap">
+    <div class="layout">
+
+      <!-- ====== Colonna scena ====== -->
+      <section aria-labelledby="sceneTitle">
+        <div id="actor"></div>
+        <h2 class="scene-title" id="sceneTitle" tabindex="-1">…</h2>
+        <p class="scene-caption" id="sceneCaption"></p>
+
+        <!-- Contenitore dove vengono iniettate le schermate -->
+        <div id="stage" class="device"></div>
+
+        <!-- Controlli -->
+        <div class="controls">
+          <button class="btn btn--ghost" id="btnBack" type="button">← Indietro</button>
+          <button class="btn btn--primary" id="btnNext" type="button">Avanti →</button>
+          <span class="step-count" id="stepCount"></span>
+        </div>
+      </section>
+
+      <!-- ====== Colonna pannello di stato ====== -->
+      <aside class="panel" aria-label="Stato della simulazione">
+        <div class="card">
+          <h3>Paziente in attesa · Maria R.</h3>
+          <div class="kv"><span>Prestazione</span><b>Ecocardiogramma</b></div>
+          <div class="kv"><span>Classe priorità</span><b><span class="klass klass--d">D</span> (target 60 gg)</b></div>
+          <div class="kv"><span>Stato</span><b><span class="status-tag waiting" id="stMariaTag">—</span></b></div>
+          <div class="kv"><span>Data appuntamento</span><b id="stMariaDate">—</b></div>
+          <div class="kv"><span>Attesa stimata</span><b id="stMariaWait">—</b></div>
+        </div>
+
+        <div class="card">
+          <h3>Pool disponibilità</h3>
+          <div class="pool-count" id="poolCount" aria-live="polite">0</div>
+          <div class="pool-sub">slot liberi disponibili per la riassegnazione</div>
+        </div>
+
+        <div class="card">
+          <h3>Prestazione programmata · Giuseppe B.</h3>
+          <div class="kv"><span>Classe priorità</span><b><span class="klass klass--p">P</span></b></div>
+          <div class="kv"><span>Stato slot</span><b id="stGiuseppe">In agenda</b></div>
+        </div>
+
+        <p class="disclaimer">
+          Dati e tempi sono illustrativi a scopo dimostrativo, non una previsione gestionale certificata.
+        </p>
+      </aside>
+
+    </div>
+  </main>
+
+  <script>
+  /* ================================================================
+     SIMULAZIONE — logica
+     Tutto vanilla, nessuna dipendenza. Le scene sono dati; il render
+     è una funzione pura sullo stato corrente.
+     ================================================================ */
+
+  // --- Utilità date in italiano, calcolate da oggi ---
+  const OGGI = new Date();
+  function addDays(n) { const d = new Date(OGGI); d.setDate(d.getDate() + n); return d; }
+  function fmt(d) { return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }); }
+
+  // Date chiave (coerenti con le statistiche del modello: classe D 84 → 39 gg, target 60)
+  const DATA_INIZIALE   = addDays(84);  // prima disponibilità sul CUP: fuori target
+  const DATA_RECUPERATA = addDays(39);  // nuova data dopo la riassegnazione
+
+  // --- Stato condiviso, mostrato nel pannello laterale ---
+  const state = {
+    pool: 0,
+    maria: { tag: 'waiting', tagLabel: 'In prenotazione', date: '—', wait: '—' },
+    giuseppe: 'In agenda',
+  };
+
+  // --- Definizione delle scene -----------------------------------
+  // Ogni scena: titolo breve (stepper), attore, titolo, didascalia,
+  // funzione render() che restituisce l'HTML della schermata,
+  // eventuale onEnter() che aggiorna lo stato, e config del bottone azione.
+  const scenes = [
+    {
+      short: 'Prenotazione',
+      actor: ['cup', 'Sportello CUP'],
+      title: 'Maria prenota sul CUP',
+      caption: 'Maria ha l’impegnativa del medico per un ecocardiogramma (classe D, da garantire entro 60 giorni). L’operatore cerca la prima data disponibile.',
+      onEnter() {
+        state.maria.tag = 'waiting'; state.maria.tagLabel = 'In prenotazione';
+        state.maria.date = '—'; state.maria.wait = '—';
+        state.giuseppe = 'In agenda'; state.pool = 0;
+        state.releaseMode = null;   // come è stato liberato lo slot: 'timeout' | 'nudge'
+      },
+      render: () => `
+        <div class="window">
+          <div class="window__bar"><span class="b"></span><span class="b"></span><span class="b"></span>
+            <span class="url">cup.servizisanitari.it/prenota</span></div>
+          <div class="window__body">
+            <div class="field"><label>Assistito</label><div class="control read">Maria R.</div></div>
+            <div class="field"><label>Residenza</label><div class="control read">Genova · centro storico</div></div>
+            <div class="field"><label>Prestazione richiesta</label><div class="control read">Ecocardiogramma — classe D (entro 60 giorni)</div></div>
+
+            <!-- Selezione multipla di sedi: pre-ordinata dall'IA per distanza dalla residenza -->
+            <div class="field">
+              <div class="sedi-head">
+                <label id="sediLbl">Sedi preferite</label>
+                <span class="ai-tag" aria-label="Ordinato automaticamente per distanza dalla tua residenza">
+                  <span class="spark" aria-hidden="true">✦</span> Ordinate dall’IA per distanza
+                </span>
+              </div>
+              <div class="sedi-list" role="group" aria-labelledby="sediLbl">
+                <label class="sede-row"><input type="checkbox" checked> <span class="sede-name">Presidio centro · Via A. Gramsci</span> <span class="sede-dist">1,2 km</span></label>
+                <label class="sede-row"><input type="checkbox" checked> <span class="sede-name">Ospedale Galliera</span> <span class="sede-dist">2,4 km</span></label>
+                <label class="sede-row"><input type="checkbox"> <span class="sede-name">Ospedale San Martino</span> <span class="sede-dist">4,8 km</span></label>
+                <label class="sede-row"><input type="checkbox"> <span class="sede-name">Villa Scassi · Sampierdarena</span> <span class="sede-dist">6,1 km</span></label>
+                <label class="sede-row"><input type="checkbox"> <span class="sede-name">Ospedale Gaslini · Quarto</span> <span class="sede-dist">8,5 km</span></label>
+              </div>
+              <p class="sedi-help">Puoi selezionare più sedi: il sistema cercherà disponibilità in tutte quelle che hai scelto.</p>
+            </div>
+          </div>
+        </div>`,
+      action: { label: 'Cerca disponibilità', kind: 'primary' },
+    },
+
+    {
+      short: 'Nessun posto',
+      actor: ['cup', 'Sportello CUP'],
+      title: 'Nessuna disponibilità entro i tempi',
+      caption: 'La prima data utile supera il tempo massimo previsto per la classe D. Il CUP propone l’iscrizione alla ricerca automatica: serve il consenso di Maria.',
+      onEnter() { state.maria.date = fmt(DATA_INIZIALE); state.maria.wait = '84 giorni (oltre target)'; },
+      render: () => `
+        <div class="window">
+          <div class="window__bar"><span class="b"></span><span class="b"></span><span class="b"></span>
+            <span class="url">cup.servizisanitari.it/prenota</span></div>
+          <div class="window__body">
+            <div class="result alert">
+              <p class="alert-line"><span aria-hidden="true">⚠</span> Nessuna disponibilità entro 60 giorni</p>
+              <div class="row"><span>Prima data libera</span><b>${fmt(DATA_INIZIALE)}</b></div>
+              <div class="row"><span>Attesa</span><b>84 giorni</b></div>
+              <div class="row"><span>Tempo massimo (classe D)</span><b>60 giorni</b></div>
+            </div>
+            <div class="consent">
+              <input type="checkbox" id="consenso" />
+              <label for="consenso">
+                Attivo la <b>ricerca automatica</b>: tengo la data del ${fmt(DATA_INIZIALE)} come riserva e
+                accetto di essere avvisato se si libera un posto prima. Acconsento al trattamento dei dati.
+              </label>
+            </div>
+          </div>
+        </div>`,
+      // Azione attiva solo dopo aver spuntato il consenso
+      action: { label: 'Attiva ricerca automatica', kind: 'primary', requiresConsent: true },
+    },
+
+    {
+      short: 'In lista',
+      actor: ['sys', 'Sistema'],
+      title: 'Maria è in lista di attesa automatica',
+      caption: 'La prenotazione di riserva resta valida. Da ora Maria non deve fare nulla: il sistema la avviserà se si libera una data anticipata. Intanto seguiamo che cosa succede sul fronte delle disponibilità.',
+      onEnter() { state.maria.tag = 'listed'; state.maria.tagLabel = 'In lista automatica'; },
+      render: () => `
+        <div class="window">
+          <div class="window__bar"><span class="b"></span><span class="b"></span><span class="b"></span>
+            <span class="url">cup.servizisanitari.it/conferma</span></div>
+          <div class="window__body">
+            <div class="result ok">
+              <p class="ok-line"><span aria-hidden="true">✓</span> Iscrizione confermata</p>
+              <div class="row"><span>Stato</span><b>In lista di attesa automatica</b></div>
+              <div class="row"><span>Data di riserva</span><b>${fmt(DATA_INIZIALE)}</b></div>
+              <div class="row"><span>Avviso anticipo</span><b>SMS, app o telefono</b></div>
+            </div>
+            <p style="margin:14px 0 0; color:var(--testo-sec); font-size:.92rem;">
+              Nessuna azione richiesta da parte di Maria.
+            </p>
+          </div>
+        </div>`,
+      action: { label: 'Avanti →', kind: 'primary' },
+    },
+
+    {
+      short: 'Agenda',
+      actor: ['p', 'Cittadino · Giuseppe'],
+      title: 'Giuseppe può liberare il posto in qualsiasi momento',
+      caption: 'Dalla sua app, Giuseppe vede l’appuntamento programmato (classe P). Appena sa di non poter venire — anche settimane prima — può liberare il posto con un tocco: entra subito nel pool. In alternativa, può aspettare la richiesta di conferma che arriverà a 10 giorni dalla data.',
+      onEnter() { state.giuseppe = 'In agenda'; },
+      render: () => `
+        <div class="phone">
+          <div class="phone__notch" aria-hidden="true"></div>
+          <div class="phone__screen">
+            <div class="phone__status"><span>9:41</span><span>app salute</span></div>
+            <div class="phone__app">
+              <h3 style="font-size:1rem; margin:4px 2px 12px;">I miei appuntamenti</h3>
+              <div class="ticket">
+                <div class="row" style="margin-bottom:6px;"><span>Prestazione programmata</span><span><span class="klass klass--p">P</span></span></div>
+                <div class="big-date">${fmt(addDays(28))}</div>
+                <div class="row"><span>Prestazione</span><span>Controllo specialistico</span></div>
+                <div class="row"><span>Sede</span><span>Presidio centro</span></div>
+              </div>
+
+              <!-- Nudge self-service: disponibile sempre, non solo alla conferma -->
+              <button class="nudge-btn" id="nudgeBtn" type="button">
+                <span aria-hidden="true">✕</span> Non posso, libera il mio posto
+              </button>
+              <p class="nudge-help">Disponibile in qualsiasi momento. Lo offri subito a chi è in attesa.</p>
+            </div>
+          </div>
+        </div>`,
+      action: { label: 'Avanti: aspetta la richiesta di conferma →', kind: 'ghost' },
+    },
+
+    {
+      short: 'Motore P',
+      actor: ['p', 'Motore P · altro utente'],
+      title: 'A Giuseppe arriva la richiesta di conferma',
+      caption: 'Giuseppe ha una prestazione programmata (classe P) tra circa 10 giorni. Può confermare la presenza entro 24 ore. In più, appena sa di non poter venire, può liberare il posto subito dall’app con un tocco: in entrambi i casi lo slot finisce nel pool.',
+      onEnter() { state.giuseppe = 'Conferma richiesta'; },
+      render: () => `
+        <div class="phone">
+          <div class="phone__notch" aria-hidden="true"></div>
+          <div class="phone__screen">
+            <div class="phone__status"><span>9:41</span><span>app salute</span></div>
+            <div class="phone__app">
+              <div class="push">
+                <div class="push__head"><span class="ic" aria-hidden="true">+</span> Servizio sanitario · ora</div>
+                <div class="push__title">Confermi la tua prestazione programmata?</div>
+                <div class="push__text">Appuntamento del ${fmt(addDays(10))}. Conferma entro 24 ore, altrimenti il posto sarà reso disponibile ad altri pazienti in attesa.</div>
+              </div>
+              <div style="text-align:center; margin-top:10px;">
+                <span class="countdown"><span aria-hidden="true">⏳</span> Tempo per confermare: 24:00:00</span>
+              </div>
+
+              <!-- Nudge self-service: liberare il posto proattivamente -->
+              <button class="nudge-btn" id="nudgeBtn" type="button">
+                <span aria-hidden="true">✕</span> Non posso, libera il mio posto
+              </button>
+              <p class="nudge-help">Lo offri subito a chi è in attesa, senza aspettare le 24 ore.</p>
+            </div>
+          </div>
+        </div>`,
+      // Azione nei controlli: simula la mancata risposta entro le 24 ore.
+      // In alternativa, il pulsante nel telefono libera il posto subito (nudge).
+      action: { label: 'Simula: Giuseppe non risponde', kind: 'ambra', onChoose: () => { state.releaseMode = 'timeout'; } },
+    },
+
+    {
+      short: 'Slot liberato',
+      actor: ['sys', 'Motore P'],
+      title: 'Il posto si libera ed entra nel pool',
+      // Didascalia adattiva: cambia se lo slot è stato liberato dall'utente o per scadenza
+      caption: () => state.releaseMode === 'nudge'
+        ? 'Giuseppe ha toccato “non posso, libera il mio posto” dall’app, appena ha saputo di non poter venire. Lo slot entra immediatamente nel pool disponibilità, ancora prima della scadenza delle 24 ore.'
+        : 'Trascorse 24 ore senza conferma, lo slot di Giuseppe viene liberato con circa 9 giorni di anticipo ed entra nel pool disponibilità, pronto per essere riassegnato.',
+      onEnter() {
+        state.pool = 1;
+        state.giuseppe = state.releaseMode === 'nudge' ? 'Liberato dall’app' : 'Slot liberato';
+      },
+      render: () => {
+        const nudge = state.releaseMode === 'nudge';
+        return `
+        <div class="window">
+          <div class="window__bar"><span class="b"></span><span class="b"></span><span class="b"></span>
+            <span class="url">motore-p · log eventi</span></div>
+          <div class="window__body">
+            <div class="result">
+              ${nudge
+                ? `<div class="row"><span>Liberato dall’utente?</span><b style="color:var(--teal)">Sì, dall’app</b></div>
+                   <div class="row"><span>Azione</span><b>Posto liberato volontariamente, subito</b></div>`
+                : `<div class="row"><span>Conferma ricevuta?</span><b style="color:var(--rosso)">No, scaduto il termine</b></div>
+                   <div class="row"><span>Azione</span><b>Slot liberato (~9 giorni di anticipo)</b></div>`}
+              <div class="row"><span>Classe del posto liberato</span><b><span class="klass klass--p">P</span> programmata</b></div>
+            </div>
+            <span class="pool-flash"><span aria-hidden="true">＋</span> 1 slot aggiunto al pool disponibilità</span>
+            <p style="margin:14px 0 0; color:var(--testo-sec); font-size:.92rem;">
+              Nessun paziente urgente è stato cancellato: si recupera solo da prestazioni programmate.
+            </p>
+          </div>
+        </div>`;
+      },
+      action: { label: 'Avanti →', kind: 'primary' },
+    },
+
+    {
+      short: 'Matching',
+      actor: ['sys', 'Algoritmo di matching'],
+      title: 'Lo slot viene abbinato a Maria',
+      caption: 'L’algoritmo confronta i pazienti in lista e abbina il nuovo slot a quello più idoneo. Maria risulta la candidata: classe più urgente, attesa più lunga, prestazione e sede compatibili.',
+      onEnter() { state.maria.tag = 'matched'; state.maria.tagLabel = 'Abbinata a uno slot'; },
+      render: () => `
+        <div class="window">
+          <div class="window__bar"><span class="b"></span><span class="b"></span><span class="b"></span>
+            <span class="url">motore-matching · esito</span></div>
+          <div class="window__body">
+            <h3 style="margin-bottom:6px;">Criteri di abbinamento</h3>
+            <ul class="match">
+              <li><span class="chk" aria-hidden="true">✓</span> Priorità clinica in coda <strong>(B → D → P)</strong> — Maria è in classe D</li>
+              <li><span class="chk" aria-hidden="true">✓</span> Tempo di attesa accumulato maggiore</li>
+              <li><span class="chk" aria-hidden="true">✓</span> Prestazione compatibile (ecocardiogramma)</li>
+              <li><span class="chk" aria-hidden="true">✓</span> Sede tra quelle scelte dal paziente</li>
+              <li><span class="chk" aria-hidden="true">✓</span> Storia clinica e affidabilità delle prenotazioni precedenti <span class="ia-pill">IA</span></li>
+              <li><span class="chk" aria-hidden="true">✓</span> Regola di equità rispettata</li>
+            </ul>
+            <span class="pool-flash" style="background:#E5F0F9; border-color:#B7CFE7; color:var(--blu);">
+              <span aria-hidden="true">→</span> Abbinamento: slot del ${fmt(DATA_RECUPERATA)} → Maria R.
+            </span>
+          </div>
+        </div>`,
+      action: { label: 'Invia l’offerta a Maria', kind: 'primary' },
+    },
+
+    {
+      short: 'Offerta',
+      actor: ['cit', 'Cittadino · Maria'],
+      title: 'Maria riceve la proposta di data anticipata',
+      caption: 'Arriva la notifica multicanale. Maria può accettare la nuova data entro la finestra di 24-48 ore. Se non accettasse, lo slot passerebbe al paziente successivo in lista.',
+      onEnter() { state.pool = 0; }, // lo slot è ora "prenotato" dall'offerta in corso
+      render: () => `
+        <div class="phone">
+          <div class="phone__notch" aria-hidden="true"></div>
+          <div class="phone__screen">
+            <div class="phone__status"><span>9:41</span><span>app salute</span></div>
+            <div class="phone__app">
+              <div class="push">
+                <div class="push__head"><span class="ic" aria-hidden="true">+</span> Servizio sanitario · ora</div>
+                <div class="push__title">Si è liberata una data più vicina!</div>
+                <div class="push__text">Ecocardiogramma disponibile il ${fmt(DATA_RECUPERATA)}, al posto del ${fmt(DATA_INIZIALE)}. Confermi?</div>
+              </div>
+              <div class="ticket">
+                <div class="big-date">${fmt(DATA_RECUPERATA)}</div>
+                <div class="row"><span>Prestazione</span><span>Ecocardiogramma</span></div>
+                <div class="row"><span>Sede</span><span>Presidio centro</span></div>
+                <div class="row"><span>Accetta entro</span><span>24-48 ore</span></div>
+              </div>
+            </div>
+          </div>
+        </div>`,
+      action: { label: 'Maria accetta la nuova data', kind: 'primary' },
+    },
+
+    {
+      short: 'Confermato',
+      actor: ['cit', 'Cittadino · Maria'],
+      title: 'Nuova data confermata',
+      caption: 'Maria ha accettato. L’agenda CUP si aggiorna in automatico, partono la conferma e il promemoria. L’attesa scende da 84 a 39 giorni, rientrando nel target — recuperando capacità già esistente, senza nuovi macchinari.',
+      onEnter() {
+        state.maria.tag = 'booked'; state.maria.tagLabel = 'Prenotazione confermata';
+        state.maria.date = fmt(DATA_RECUPERATA); state.maria.wait = '39 giorni (entro target)';
+        state.giuseppe = 'Slot riassegnato';
+      },
+      render: () => `
+        <div class="phone">
+          <div class="phone__notch" aria-hidden="true"></div>
+          <div class="phone__screen">
+            <div class="phone__status"><span>9:41</span><span>app salute</span></div>
+            <div class="phone__app">
+              <div class="ticket">
+                <p class="ok-line" style="margin:0 0 8px;"><span aria-hidden="true">✓</span> Appuntamento confermato</p>
+                <div class="big-date">${fmt(DATA_RECUPERATA)}</div>
+                <div class="row"><span>Prestazione</span><span>Ecocardiogramma</span></div>
+                <div class="row"><span>Sede</span><span>Presidio centro</span></div>
+                <div class="row"><span>Promemoria</span><span>attivo</span></div>
+              </div>
+              <div class="push" style="margin-top:12px;">
+                <div class="push__head"><span class="ic" aria-hidden="true">+</span> Riepilogo</div>
+                <div class="push__text">Attesa: <b>84 → 39 giorni</b>. Agenda CUP aggiornata, posto di riserva liberato.</div>
+              </div>
+            </div>
+          </div>
+        </div>`,
+      action: { label: '↺ Ricomincia', kind: 'ghost', restart: true },
+    },
+  ];
+
+  /* ================================================================
+     Rendering e navigazione
+     ================================================================ */
+  let i = 0;                         // indice scena corrente
+  let consentGiven = false;          // stato consenso (scena 2)
+
+  const el = {
+    stepper: document.getElementById('stepper'),
+    actor: document.getElementById('actor'),
+    title: document.getElementById('sceneTitle'),
+    caption: document.getElementById('sceneCaption'),
+    stage: document.getElementById('stage'),
+    back: document.getElementById('btnBack'),
+    next: document.getElementById('btnNext'),
+    count: document.getElementById('stepCount'),
+    live: document.getElementById('live'),
+    // pannello
+    poolCount: document.getElementById('poolCount'),
+    mariaTag: document.getElementById('stMariaTag'),
+    mariaDate: document.getElementById('stMariaDate'),
+    mariaWait: document.getElementById('stMariaWait'),
+    giuseppe: document.getElementById('stGiuseppe'),
+  };
+
+  // Costruisce lo stepper una sola volta
+  scenes.forEach((s, idx) => {
+    const li = document.createElement('li');
+    li.textContent = (idx + 1) + '. ' + s.short;
+    el.stepper.appendChild(li);
+  });
+
+  function syncPanel() {
+    el.poolCount.textContent = state.pool;
+    el.mariaTag.textContent = state.maria.tagLabel;
+    el.mariaTag.className = 'status-tag ' + state.maria.tag;
+    el.mariaDate.textContent = state.maria.date;
+    el.mariaWait.textContent = state.maria.wait;
+    el.giuseppe.textContent = state.giuseppe;
+  }
+
+  function syncStepper() {
+    [...el.stepper.children].forEach((li, idx) => {
+      li.dataset.state = idx < i ? 'done' : (idx === i ? 'current' : '');
+      if (idx === i) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
+    });
+  }
+
+  function render() {
+    const s = scenes[i];
+
+    // Aggiorna lo stato prima di disegnare il pannello
+    if (typeof s.onEnter === 'function') s.onEnter();
+
+    // Attore
+    el.actor.innerHTML = `<span class="actor actor--${s.actor[0]}"><span class="dot" aria-hidden="true"></span>${s.actor[1]}</span>`;
+    // Testi (la didascalia può essere una stringa o una funzione)
+    el.title.textContent = s.title;
+    el.caption.textContent = (typeof s.caption === 'function') ? s.caption() : s.caption;
+    // Schermata
+    el.stage.className = 'device fade';
+    el.stage.innerHTML = s.render();
+
+    // Listener del pulsante "nudge" (se presente nella scena): libera subito il
+    // posto e salta direttamente alla scena "Slot liberato", da qualunque punto.
+    const nudge = document.getElementById('nudgeBtn');
+    if (nudge) {
+      nudge.addEventListener('click', () => {
+        state.releaseMode = 'nudge';
+        const target = scenes.findIndex(x => x.short === 'Slot liberato');
+        if (target >= 0) { i = target; render(); }
+      });
+    }
+
+    // Bottone azione (Avanti / azione speciale)
+    const a = s.action || { label: 'Avanti →', kind: 'primary' };
+    el.next.textContent = a.label;
+    el.next.className = 'btn btn--' + (a.kind || 'primary');
+
+    // Gestione consenso (scena 2): bottone disabilitato finché non si spunta
+    consentGiven = false;
+    const consenso = document.getElementById('consenso');
+    if (a.requiresConsent && consenso) {
+      el.next.disabled = true;
+      consenso.addEventListener('change', () => {
+        consentGiven = consenso.checked;
+        el.next.disabled = !consentGiven;
+      });
+    } else {
+      el.next.disabled = false;
+    }
+
+    // Indietro
+    el.back.disabled = (i === 0);
+
+    el.count.textContent = `Passo ${i + 1} di ${scenes.length}`;
+    el.live.textContent = `Passo ${i + 1} di ${scenes.length}: ${s.title}`;
+
+    syncStepper();
+    syncPanel();
+
+    // Sposta il focus al titolo della scena per chi naviga da tastiera
+    el.title.focus();
+  }
+
+  // Avanti / azione
+  el.next.addEventListener('click', () => {
+    const s = scenes[i];
+    const a = s.action || {};
+    if (a.requiresConsent && !consentGiven) return;        // sicurezza
+    if (typeof a.onChoose === 'function') a.onChoose();     // imposta lo stato (es. modalità di rilascio)
+    if (a.restart) { i = 0; render(); return; }            // ricomincia dalla fine
+    if (i < scenes.length - 1) { i++; render(); }
+  });
+
+  // Indietro
+  el.back.addEventListener('click', () => { if (i > 0) { i--; render(); } });
+
+  // Avvio
+  render();
+  </script>
+</body>
+</html>
